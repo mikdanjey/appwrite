@@ -1,55 +1,50 @@
 <?php
 
-use Illuminate\Contracts\Http\Kernel;
-use Illuminate\Http\Request;
+/**
+ * Init
+ *
+ * Inializes both Appwrite API entry point, queue workers, and CLI tasks.
+ * Set configuration, framework resources, app constants
+ *
+ */
 
-define('LARAVEL_START', microtime(true));
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
-/*
-|--------------------------------------------------------------------------
-| Check If The Application Is Under Maintenance
-|--------------------------------------------------------------------------
-|
-| If the application is in maintenance / demo mode via the "down" command
-| we will load this file so that any pre-rendered content can be shown
-| instead of starting the framework, which could cause an exception.
-|
-*/
-
-if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php')) {
-    require $maintenance;
+if (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    require __DIR__ . '/../vendor/autoload.php';
 }
 
-/*
-|--------------------------------------------------------------------------
-| Register The Auto Loader
-|--------------------------------------------------------------------------
-|
-| Composer provides a convenient, automatically generated class loader for
-| this application. We just need to utilize it! We'll simply require it
-| into the script here so we don't need to manually load our classes.
-|
-*/
+use Utopia\Preloader\Preloader;
 
-require __DIR__.'/../vendor/autoload.php';
+include __DIR__ . '/controllers/general.php';
 
-/*
-|--------------------------------------------------------------------------
-| Run The Application
-|--------------------------------------------------------------------------
-|
-| Once we have the application, we can handle the incoming request using
-| the application's HTTP kernel. Then, we will send the response back
-| to this client's browser, allowing them to enjoy our application.
-|
-*/
+$preloader = new Preloader();
 
-$app = require_once __DIR__.'/../bootstrap/app.php';
+foreach (
+    [
+    realpath(__DIR__ . '/../vendor/composer'),
+    realpath(__DIR__ . '/../vendor/amphp'),
+    realpath(__DIR__ . '/../vendor/felixfbecker'),
+    realpath(__DIR__ . '/../vendor/twig/twig'),
+    realpath(__DIR__ . '/../vendor/guzzlehttp/guzzle'),
+    realpath(__DIR__ . '/../vendor/slickdeals'),
+    realpath(__DIR__ . '/../vendor/psr/log'),
+    realpath(__DIR__ . '/../vendor/matomo'),
+    realpath(__DIR__ . '/../vendor/symfony'),
+    realpath(__DIR__ . '/../vendor/mongodb'),
+    realpath(__DIR__ . '/../vendor/utopia-php/websocket'), // TODO: remove workerman autoload
+    realpath(__DIR__ . '/../vendor/utopia-php/cache'), // TODO: remove memcache autoload
+    ] as $key => $value
+) {
+    if ($value !== false) {
+        $preloader->ignore($value);
+    }
+}
 
-$kernel = $app->make(Kernel::class);
-
-$response = $kernel->handle(
-    $request = Request::capture()
-)->send();
-
-$kernel->terminate($request, $response);
+$preloader
+    ->paths(realpath(__DIR__ . '/../app/config'))
+    ->paths(realpath(__DIR__ . '/../app/controllers'))
+    ->paths(realpath(__DIR__ . '/../src'))
+    ->load();
